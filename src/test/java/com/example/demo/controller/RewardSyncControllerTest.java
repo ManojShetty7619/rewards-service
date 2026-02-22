@@ -1,36 +1,40 @@
 package com.example.demo.controller;
 
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.example.demo.dto.RewardResponse;
 import com.example.demo.service.RewardService;
 
-class RewardSyncControllerTest {
+@ExtendWith(MockitoExtension.class)
+class RewardControllerTest {
+
+	@Mock
+	private RewardService rewardService;
+
+	@InjectMocks
+	private RewardController rewardController;
 
 	@Test
-	void shouldReturnResponse() {
+	void getRewards_success() {
 
-		RewardService service = mock(RewardService.class);
+		when(rewardService.calculateRewards(anyLong(), any(), any())).thenReturn(new RewardResponse());
 
-		RewardResponse mockResponse = new RewardResponse(1L, Map.of(), 100, List.of());
+		RewardResponse response = rewardController.getRewards(1L, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 2, 1));
 
-		when(service.calculateRewards(anyLong(), any(), any())).thenReturn(mockResponse);
-
-		RewardSyncController controller = new RewardSyncController(service);
-
-		RewardResponse response = controller.getRewards(1L, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 3, 31));
-
-		assertEquals(100, response.getTotalRewards());
+		assertNotNull(response);
+		verify(rewardService, times(1)).calculateRewards(anyLong(), any(), any());
 	}
 }

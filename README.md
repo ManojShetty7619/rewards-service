@@ -1,290 +1,160 @@
 # Customer Reward Points API
 
 ## Overview
-This Spring Boot application calculates customer reward points
-based on purchase transactions.
 
-The system supports both:
-- Synchronous API flow
-- Asynchronous API flow
+This Spring Boot application calculates customer reward points based on
+purchase transactions within a given date range.
 
-Reward Rules:
-- 2 points for every dollar spent above $100
-- 1 point for every dollar spent between $50 and $100
-- No points for purchases below $50
+The system provides a single REST API to calculate rewards for a
+customer.
 
----
+------------------------------------------------------------------------
+
+## Reward Rules
+
+-   2 points for every dollar spent above \$100\
+-   1 point for every dollar spent between \$50 and \$100\
+-   0 points for purchases below \$50
+
+------------------------------------------------------------------------
 
 ## Tech Stack
-- Java 8
-- Spring Boot
-- Spring Data JPA
-- H2 In-Memory Database
-- JUnit 5
-- Mockito
-- SLF4J + Logback
-- CompletableFuture (Async processing)
 
----
+-   Java 17\
+-   Spring Boot\
+-   Spring Data JPA\
+-   H2 In-Memory Database\
+-   Lombok\
+-   JUnit 5\
+-   Mockito\
+-   SLF4J + Logback
+
+------------------------------------------------------------------------
 
 ## Data Setup
+
 Schema and test data are automatically loaded from:
 
-- `src/main/resources/schema.sql`
-- `src/main/resources/data.sql`
+src/main/resources/schema.sql\
+src/main/resources/data.sql
 
-Data includes:
-- Customers
-- Products
-- 3 months of transactions
-
----
+------------------------------------------------------------------------
 
 ## How to Run
 
-```bash
+mvn clean install\
 mvn spring-boot:run
-```
 
 Application runs at:
 
-```
 http://localhost:8080
-```
 
----
+------------------------------------------------------------------------
 
 ## H2 Database Console
 
-```
 http://localhost:8080/h2-console
-```
 
-JDBC URL:
-```
+JDBC URL:\
 jdbc:h2:mem:rewardsdb
-```
 
-Username:
-```
+Username:\
 manoj
-```
 
-Password:
-```
+Password:\
 manoj
-```
 
----
+------------------------------------------------------------------------
 
-# API Endpoints
+# API Endpoint
 
-## 1️⃣ Synchronous API
-
-```
-GET /api/rewards/sync/{customerId}
-```
-
-Example:
-
-```
-http://localhost:8080/api/rewards/sync/1?from=2025-01-01&to=2025-03-31
-```
-
----
-
-## 2️⃣ Asynchronous API
-
-```
-GET /api/rewards/async/{customerId}
-```
-
-Example:
-
-```
-http://localhost:8080/api/rewards/async/1?from=2025-01-01&to=2025-03-31
-```
-
-Both APIs return the same response structure.
-
----
-
-# Query Parameters
-
-| Parameter | Type | Required | Format |
-|------------|--------|------------|----------|
-| from | LocalDate | Yes | yyyy-MM-dd |
-| to | LocalDate | Yes | yyyy-MM-dd |
-
----
-
-# SUCCESS RESPONSE
+GET /api/rewards/{customerId}
 
 Example Request:
 
-```
-GET /api/rewards/sync/1?from=2025-01-01&to=2025-03-31
-```
+http://localhost:8080/api/rewards/1?startDate=2025-01-01&endDate=2025-03-31
 
-Example Response:
+------------------------------------------------------------------------
 
-```json
-{
-  "customerId": 1,
-  "monthlyRewards": {
-    "2025-01": 90,
-    "2025-02": 30,
-    "2025-03": 0
-  },
-  "totalRewards": 120,
-  "transactions": [
-    {
-      "txnId": 1,
-      "customerId": 1,
-      "productId": 101,
-      "amount": 120.0,
-      "txnDate": "2025-01-15"
-    }
-  ]
-}
-```
+## Query Parameters
 
----
+  Parameter   Type        Required   Format
+  ----------- ----------- ---------- ------------
+  startDate   LocalDate   Yes        yyyy-MM-dd
+  endDate     LocalDate   Yes        yyyy-MM-dd
+
+------------------------------------------------------------------------
+
+# SUCCESS RESPONSE
+
+Example Response (Customer 1 - John):
+
+{ "customerId": 1, "customerName": "John", "monthlyRewards": {
+"JANUARY": { "totalPoints": 90, "totalAmount": 120.0 }, "FEBRUARY": {
+"totalPoints": 30, "totalAmount": 80.0 }, "MARCH": { "totalPoints": 0,
+"totalAmount": 40.0 } }, "transactions": \[ { "id": 1, "amount": 120.0,
+"date": "2025-01-15" }, { "id": 2, "amount": 80.0, "date": "2025-02-10"
+}, { "id": 3, "amount": 40.0, "date": "2025-03-05" } \] }
+
+------------------------------------------------------------------------
 
 # VALIDATION & ERROR SCENARIOS
 
----
+1.  Invalid Date
 
-## ❌ 1. Invalid Date (Non-existent date)
+GET /api/rewards/1?startDate=2025-03-01&endDate=2025-04-31
 
-Request:
+Response: { "status": 400, "message": "Invalid date. Please use
+yyyy-MM-dd and provide a valid calendar date." }
 
-```
-GET /api/rewards/sync/1?from=2025-03-01&to=2025-04-31
-```
+2.  From Date Greater Than To Date
 
-Response:
+GET /api/rewards/1?startDate=2025-05-01&endDate=2025-03-01
 
-```json
-{
-  "status": 400,
-  "message": "Invalid date. Please use yyyy-MM-dd and valid calendar date."
-}
-```
+Response: { "status": 400, "message": "From date cannot be after end
+date" }
 
----
+3.  No Transactions Found
 
-## ❌ 2. Invalid Date Format
+GET /api/rewards/1?startDate=2026-01-01&endDate=2026-03-31
 
-Request:
+Response: { "status": 404, "message": "No transactions found" }
 
-```
-GET /api/rewards/sync/1?from=03-01-2025&to=03-31-2025
-```
+4.  Invalid Customer ID
 
-Response:
+GET /api/rewards/999?startDate=2025-01-01&endDate=2025-03-31
 
-```json
-{
-  "status": 400,
-  "message": "Invalid date format or invalid date value"
-}
-```
+Response: { "status": 404, "message": "Customer not found" }
 
----
-
-## ❌ 3. From Date Greater Than To Date
-
-Request:
-
-```
-GET /api/rewards/sync/1?from=2025-05-01&to=2025-03-01
-```
-
-Response:
-
-```json
-{
-  "status": 400,
-  "message": "From date cannot be after To date"
-}
-```
-
----
-
-## ❌ 4. No Transactions Found
-
-Request:
-
-```
-GET /api/rewards/sync/1?from=2026-01-01&to=2026-03-31
-```
-
-Response:
-
-```json
-{
-  "status": 404,
-  "message": "No transactions found"
-}
-```
-
----
-
-## ❌ 5. Invalid Customer ID
-
-Request:
-
-```
-GET /api/rewards/sync/999?from=2025-01-01&to=2025-03-31
-```
-
-Response:
-
-```json
-{
-  "status": 404,
-  "message": "No transactions found"
-}
-```
-
----
-
-# Sync vs Async Flow
-
-| Feature | Sync | Async |
-|----------|-------|--------|
-| URL | /sync/ | /async/ |
-| Thread Type | Blocking | Non-blocking |
-| Return Type | RewardResponse | CompletableFuture<RewardResponse> |
-| JSON Output | Same | Same |
-
----
+------------------------------------------------------------------------
 
 # Logging
 
-Logging levels:
+-   INFO → API start and completion\
+-   DEBUG → Transaction reward calculations\
+-   ERROR → Validation and exception handling
 
-- INFO → API request start/end
-- DEBUG → Transaction calculations
-- ERROR → Exception handling
+------------------------------------------------------------------------
 
----
+# Testing
+
+mvn test
+
+Uses @ExtendWith(MockitoExtension.class), @Mock and @InjectMocks.
+
+------------------------------------------------------------------------
 
 # Project Structure
 
-```
-com.homework
- ├── controller
- ├── service
- ├── repository
- ├── model
- ├── dto
- ├── util
- ├── exception
-```
+com.homework\
+├── controller\
+├── service\
+├── repository\
+├── model\
+├── dto\
+├── exception
 
----
+------------------------------------------------------------------------
 
 # Author
 

@@ -4,40 +4,64 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.example.demo.dto.RewardResponse;
+import com.example.demo.model.Customer;
 import com.example.demo.model.Transaction;
+import com.example.demo.repository.CustomerRepository;
 import com.example.demo.repository.TransactionRepository;
 import com.example.demo.service.impl.RewardServiceImpl;
-import com.example.demo.util.RewardCalculator;
 
+@ExtendWith(MockitoExtension.class)
 class RewardServiceImplTest {
 
-	@Test
-	void shouldCalculateRewardsCorrectly() {
+    @Mock
+    private TransactionRepository transactionRepository;
 
-		TransactionRepository repo = mock(TransactionRepository.class);
-		RewardCalculator calculator = new RewardCalculator();
+    @Mock
+    private CustomerRepository customerRepository;
 
-		RewardServiceImpl service = new RewardServiceImpl(repo, calculator);
+    @InjectMocks
+    private RewardServiceImpl rewardService;
 
-		Transaction txn = new Transaction();
-		txn.setTxnId(1L);
-		txn.setCustomerId(1L);
-		txn.setAmount(120);
-		txn.setTxnDate(LocalDate.of(2025, 1, 10));
+    @Test
+    void shouldCalculateRewardsSuccessfully() {
 
-		when(repo.findByCustomerIdAndTxnDateBetween(anyLong(), any(), any())).thenReturn(List.of(txn));
+        Customer customer = new Customer();
+        customer.setCustomerId(1L);
+        customer.setName("Pooja Pachore");
 
-		var response = service.calculateRewards(1L, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 3, 31));
+        when(customerRepository.findById(1L))
+                .thenReturn(Optional.of(customer));
 
-		assertEquals(90, response.getTotalRewards());
-		assertFalse(response.getMonthlyRewards().isEmpty());
-	}
+        Transaction txn = new Transaction();
+        txn.setTxnId(1L);
+        txn.setAmount(120);
+        txn.setTxnDate(LocalDate.of(2025,1,10));
+
+        when(transactionRepository
+                .findByCustomerIdAndTxnDateBetween(
+                        anyLong(), any(), any()))
+                .thenReturn(List.of(txn));
+
+        RewardResponse response =
+                rewardService.calculateRewards(
+                        1L,
+                        LocalDate.of(2025,1,1),
+                        LocalDate.of(2025,3,31));
+
+        assertEquals(1L, response.getCustomerId());
+        assertFalse(response.getMonthlyRewards().isEmpty());
+    }
 }

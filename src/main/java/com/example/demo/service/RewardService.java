@@ -6,5 +6,7 @@ import com.example.demo.dto.RewardResponse;
 
 public interface RewardService {
 
-	RewardResponse calculateRewards(Long customerId, LocalDate from, LocalDate to);
+    RewardResponse calculateRewards(Long customerId,
+                                    LocalDate startDate,
+                                    LocalDate endDate);
 }
