@@ -12,21 +12,21 @@ customer.
 
 ## Reward Rules
 
--   2 points for every dollar spent above \$100\
--   1 point for every dollar spent between \$50 and \$100\
+-   2 points for every dollar spent above \$100
+-   1 point for every dollar spent between \$50 and \$100
 -   0 points for purchases below \$50
 
 ------------------------------------------------------------------------
 
 ## Tech Stack
 
--   Java 17\
--   Spring Boot\
--   Spring Data JPA\
--   H2 In-Memory Database\
--   Lombok\
--   JUnit 5\
--   Mockito\
+-   Java 17
+-   Spring Boot
+-   Spring Data JPA
+-   H2 In-Memory Database
+-   Lombok
+-   JUnit 5
+-   Mockito
 -   SLF4J + Logback
 
 ------------------------------------------------------------------------
@@ -37,6 +37,13 @@ Schema and test data are automatically loaded from:
 
 src/main/resources/schema.sql\
 src/main/resources/data.sql
+
+Sample Data Included:
+
+Customers: - 1 → John - 2 → Alice
+
+Transactions (Customer 1): - 120 on 2025-01-15 - 80 on 2025-02-10 - 40
+on 2025-03-05
 
 ------------------------------------------------------------------------
 
@@ -55,104 +62,155 @@ http://localhost:8080
 
 http://localhost:8080/h2-console
 
-JDBC URL:\
-jdbc:h2:mem:rewardsdb
+JDBC URL: jdbc:h2:mem:rewardsdb
 
-Username:\
-manoj
+Username: manoj
 
-Password:\
-manoj
+Password: manoj
 
 ------------------------------------------------------------------------
 
 # API Endpoint
 
-GET /api/rewards/{customerId}
+GET /api/rewards
 
 Example Request:
 
-http://localhost:8080/api/rewards/1?startDate=2025-01-01&endDate=2025-03-31
+http://localhost:8080/api/rewards?customerId=1&startDate=2025-01-01&endDate=2025-03-31
 
 ------------------------------------------------------------------------
 
 ## Query Parameters
 
-  Parameter   Type        Required   Format
-  ----------- ----------- ---------- ------------
-  startDate   LocalDate   Yes        yyyy-MM-dd
-  endDate     LocalDate   Yes        yyyy-MM-dd
+  Parameter    Type        Required   Format
+  ------------ ----------- ---------- ------------
+  customerId   Long        Yes        Numeric
+  startDate    LocalDate   Yes        yyyy-MM-dd
+  endDate      LocalDate   Yes        yyyy-MM-dd
 
 ------------------------------------------------------------------------
 
 # SUCCESS RESPONSE
 
-Example Response (Customer 1 - John):
-
-{ "customerId": 1, "customerName": "John", "monthlyRewards": {
-"JANUARY": { "totalPoints": 90, "totalAmount": 120.0 }, "FEBRUARY": {
-"totalPoints": 30, "totalAmount": 80.0 }, "MARCH": { "totalPoints": 0,
-"totalAmount": 40.0 } }, "transactions": \[ { "id": 1, "amount": 120.0,
-"date": "2025-01-15" }, { "id": 2, "amount": 80.0, "date": "2025-02-10"
-}, { "id": 3, "amount": 40.0, "date": "2025-03-05" } \] }
+``` json
+{
+  "customerId": 1,
+  "customerName": "John",
+  "monthlyRewards": {
+    "JANUARY": {
+      "totalPoints": 90,
+      "totalAmount": 120.0
+    },
+    "FEBRUARY": {
+      "totalPoints": 30,
+      "totalAmount": 80.0
+    },
+    "MARCH": {
+      "totalPoints": 0,
+      "totalAmount": 40.0
+    }
+  },
+  "transactions": [
+    {
+      "id": 1,
+      "amount": 120.0,
+      "date": "2025-01-15"
+    },
+    {
+      "id": 2,
+      "amount": 80.0,
+      "date": "2025-02-10"
+    },
+    {
+      "id": 3,
+      "amount": 40.0,
+      "date": "2025-03-05"
+    }
+  ]
+}
+```
 
 ------------------------------------------------------------------------
 
 # VALIDATION & ERROR SCENARIOS
 
-1.  Invalid Date
+## 1️⃣ Invalid Date
 
-GET /api/rewards/1?startDate=2025-03-01&endDate=2025-04-31
+Request: GET
+/api/rewards?customerId=1&startDate=2025-03-01&endDate=2025-04-31
 
-Response: { "status": 400, "message": "Invalid date. Please use
-yyyy-MM-dd and provide a valid calendar date." }
+Response:
 
-2.  From Date Greater Than To Date
+``` json
+{
+  "status": 400,
+  "message": "Invalid date. Please use yyyy-MM-dd and provide a valid calendar date."
+}
+```
 
-GET /api/rewards/1?startDate=2025-05-01&endDate=2025-03-01
+------------------------------------------------------------------------
 
-Response: { "status": 400, "message": "From date cannot be after end
-date" }
+## 2️⃣ From Date Greater Than End Date
 
-3.  No Transactions Found
+Request: GET
+/api/rewards?customerId=1&startDate=2025-05-01&endDate=2025-03-01
 
-GET /api/rewards/1?startDate=2026-01-01&endDate=2026-03-31
+Response:
 
-Response: { "status": 404, "message": "No transactions found" }
+``` json
+{
+  "status": 400,
+  "message": "From date cannot be after end date"
+}
+```
 
-4.  Invalid Customer ID
+------------------------------------------------------------------------
 
-GET /api/rewards/999?startDate=2025-01-01&endDate=2025-03-31
+## 3️⃣ No Transactions Found
 
-Response: { "status": 404, "message": "Customer not found" }
+Request: GET
+/api/rewards?customerId=1&startDate=2026-01-01&endDate=2026-03-31
+
+Response:
+
+``` json
+{
+  "status": 404,
+  "message": "No transactions found"
+}
+```
+
+------------------------------------------------------------------------
+
+## 4️⃣ Invalid Customer ID
+
+Request: GET
+/api/rewards?customerId=999&startDate=2025-01-01&endDate=2025-03-31
+
+Response:
+
+``` json
+{
+  "status": 404,
+  "message": "Customer not found"
+}
+```
 
 ------------------------------------------------------------------------
 
 # Logging
 
--   INFO → API start and completion\
--   DEBUG → Transaction reward calculations\
--   ERROR → Validation and exception handling
+-   INFO → API start and completion
+-   DEBUG → Transaction reward calculation
+-   ERROR → Validation and exception scenarios
 
 ------------------------------------------------------------------------
 
 # Testing
 
-mvn test
+Run: mvn test
 
-Uses @ExtendWith(MockitoExtension.class), @Mock and @InjectMocks.
-
-------------------------------------------------------------------------
-
-# Project Structure
-
-com.homework\
-├── controller\
-├── service\
-├── repository\
-├── model\
-├── dto\
-├── exception
+Uses: - @ExtendWith(MockitoExtension.class) - @Mock - @InjectMocks
 
 ------------------------------------------------------------------------
 
