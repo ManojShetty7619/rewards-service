@@ -1,0 +1,4 @@
+{
+  "status": 400,
+  "message": "Provide either months or startDate & endDate, not both"
+}

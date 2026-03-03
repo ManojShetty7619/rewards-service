@@ -1,0 +1,11 @@
+Default (Last 3 Months)
+GET /api/rewards?customerId=1
+
+Custom Months
+GET /api/rewards?customerId=6&months=4
+
+Custom Date Range
+GET /api/rewards?customerId=2&startDate=2026-02-01&endDate=2026-03-31
+
+Validation Error
+GET /api/rewards?customerId=1&months=3&startDate=2026-01-01&endDate=2026-03-31
