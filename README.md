@@ -45,6 +45,12 @@ Application runs at:
 
 http://localhost:8080
 
+http://localhost:8080/h2-console
+
+JDBC URL : jdbc:h2:mem:rewardsdb
+Username : manoj
+Password : manoj
+
 ------------------------------------------------------------------------
 
 # API Endpoint
