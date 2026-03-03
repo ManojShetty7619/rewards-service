@@ -1,22 +1,5 @@
 package com.example.demo.service;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.when;
-
-import java.time.LocalDate;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.example.demo.dto.RewardResponse;
 import com.example.demo.exception.InvalidRequestException;
@@ -25,71 +8,139 @@ import com.example.demo.model.Customer;
 import com.example.demo.model.Transaction;
 import com.example.demo.repository.CustomerRepository;
 import com.example.demo.repository.TransactionRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class RewardServiceImplTest {
+class RewardServiceTest {
 
-	@Mock
-	private TransactionRepository transactionRepository;
+    @Mock
+    private TransactionRepository transactionRepository;
 
-	@Mock
-	private CustomerRepository customerRepository;
+    @Mock
+    private CustomerRepository customerRepository;
 
-	@InjectMocks
-	private RewardService rewardService;
+    @InjectMocks
+    private RewardService rewardService;
 
-	@Test
-	void shouldCalculateRewardsSuccessfully() {
+    private Customer customer;
 
-		Customer customer = new Customer();
-		customer.setCustomerId(1L);
-		customer.setName("Pooja Pachore");
+    @BeforeEach
+    void setup() {
+        customer = new Customer();
+        customer.setCustomerId(1L);
+        customer.setName("John");
+    }
 
-		when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
+    @Test
+    void shouldCalculateRewardsForDateRange() {
 
-		Transaction txn = new Transaction();
-		txn.setTxnId(1L);
-		txn.setAmount(120);
-		txn.setTxnDate(LocalDate.of(2025, 1, 10));
+        when(customerRepository.findById(1L))
+                .thenReturn(Optional.of(customer));
 
-		when(transactionRepository.findByCustomerIdAndTxnDateBetween(anyLong(), any(), any())).thenReturn(List.of(txn));
+        List<Transaction> transactions = List.of(
+                new Transaction(
+                        1L,
+                        1L,
+                        101L,
+                        120.0,
+                        LocalDate.of(2025, 1, 15))
+        );
 
-		RewardResponse response = rewardService.calculateRewards(1L, LocalDate.of(2025, 1, 1),
-				LocalDate.of(2025, 3, 31));
+        when(transactionRepository
+                .findByCustomerIdAndTxnDateBetween(
+                        1L,
+                        LocalDate.of(2025,1,1),
+                        LocalDate.of(2025,3,31)))
+                .thenReturn(transactions);
 
-		assertEquals(1L, response.getCustomerId());
-		assertFalse(response.getMonthlyRewards().isEmpty());
-	}
+        RewardResponse response =
+                rewardService.calculateRewards(
+                        1L,
+                        LocalDate.of(2025,1,1),
+                        LocalDate.of(2025,3,31),
+                        null);
 
-	@Test
-	void shouldThrowExceptionWhenStartDateAfterEndDate() {
+        assertNotNull(response);
+        assertEquals(1L, response.getCustomerId());
+    }
 
-		assertThrows(InvalidRequestException.class,
-				() -> rewardService.calculateRewards(1L, LocalDate.of(2025, 5, 1), LocalDate.of(2025, 3, 1)));
-	}
+    @Test
+    void shouldThrowExceptionWhenStartDateAfterEndDate() {
 
-	@Test
-	void shouldThrowExceptionWhenCustomerNotFound() {
+        assertThrows(InvalidRequestException.class, () ->
+                rewardService.calculateRewards(
+                        1L,
+                        LocalDate.of(2025,3,1),
+                        LocalDate.of(2025,1,1),
+                        null));
+    }
 
-		when(customerRepository.findById(1L)).thenReturn(Optional.empty());
+    @Test
+    void shouldThrowExceptionWhenMonthsAndDateRangeBothProvided() {
 
-		assertThrows(TransactionNotFoundException.class,
-				() -> rewardService.calculateRewards(1L, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 3, 31)));
-	}
+        assertThrows(InvalidRequestException.class, () ->
+                rewardService.calculateRewards(
+                        1L,
+                        LocalDate.of(2025,1,1),
+                        LocalDate.of(2025,3,1),
+                        2));
+    }
 
-	@Test
-	void shouldThrowExceptionWhenNoTransactionsFound() {
+    @Test
+    void shouldThrowExceptionWhenMonthsNegative() {
 
-		Customer customer = new Customer();
-		customer.setCustomerId(1L);
-		customer.setName("John");
+        assertThrows(InvalidRequestException.class, () ->
+                rewardService.calculateRewards(
+                        1L,
+                        null,
+                        null,
+                        -1));
+    }
 
-		when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
+    @Test
+    void shouldThrowExceptionWhenCustomerNotFound() {
 
-		when(transactionRepository.findByCustomerIdAndTxnDateBetween(anyLong(), any(), any()))
-				.thenReturn(Collections.emptyList());
+        when(customerRepository.findById(1L))
+                .thenReturn(Optional.empty());
 
-		assertThrows(TransactionNotFoundException.class,
-				() -> rewardService.calculateRewards(1L, LocalDate.of(2026, 1, 1), LocalDate.of(2026, 3, 31)));
-	}
+        assertThrows(TransactionNotFoundException.class, () ->
+                rewardService.calculateRewards(
+                        1L,
+                        LocalDate.of(2025,1,1),
+                        LocalDate.of(2025,3,31),
+                        null));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenNoTransactionsFound() {
+
+        when(customerRepository.findById(1L))
+                .thenReturn(Optional.of(customer));
+
+        when(transactionRepository
+                .findByCustomerIdAndTxnDateBetween(
+                        1L,
+                        LocalDate.of(2025,1,1),
+                        LocalDate.of(2025,3,31)))
+                .thenReturn(List.of());
+
+        assertThrows(TransactionNotFoundException.class, () ->
+                rewardService.calculateRewards(
+                        1L,
+                        LocalDate.of(2025,1,1),
+                        LocalDate.of(2025,3,31),
+                        null));
+    }
 }

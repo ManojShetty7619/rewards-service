@@ -20,15 +20,26 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class RewardController {
 
-	private final RewardService rewardService;
+    private final RewardService rewardService;
 
-	@GetMapping
-	public RewardResponse getRewards(@RequestParam Long customerId,
-			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+    @GetMapping
+    public RewardResponse getRewards(
+            @RequestParam Long customerId,
 
-		log.info("Fetching rewards for customerId: {}, startDate: {}, endDate: {}", customerId, startDate, endDate);
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate startDate,
 
-		return rewardService.calculateRewards(customerId, startDate, endDate);
-	}
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate endDate,
+
+            @RequestParam(required = false)
+            Integer months) {
+
+        log.info("Fetching rewards for customerId={}, startDate={}, endDate={}, months={}",
+                customerId, startDate, endDate, months);
+
+        return rewardService.calculateRewards(customerId, startDate, endDate, months);
+    }
 }

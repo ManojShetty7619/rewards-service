@@ -3,10 +3,15 @@
 ## Overview
 
 This Spring Boot application calculates customer reward points based on
-purchase transactions within a given date range.
+purchase transactions.
 
-The system provides a single REST API to calculate rewards for a
-customer.
+The API supports:
+
+-   Default last 3 months logic
+-   Custom number of months
+-   Custom date range
+-   Proper validation handling
+-   Global exception handling
 
 ------------------------------------------------------------------------
 
@@ -31,22 +36,6 @@ customer.
 
 ------------------------------------------------------------------------
 
-## Data Setup
-
-Schema and test data are automatically loaded from:
-
-src/main/resources/schema.sql\
-src/main/resources/data.sql
-
-Sample Data Included:
-
-Customers: - 1 → John - 2 → Alice
-
-Transactions (Customer 1): - 120 on 2025-01-15 - 80 on 2025-02-10 - 40
-on 2025-03-05
-
-------------------------------------------------------------------------
-
 ## How to Run
 
 mvn clean install\
@@ -58,39 +47,30 @@ http://localhost:8080
 
 ------------------------------------------------------------------------
 
-## H2 Database Console
-
-http://localhost:8080/h2-console
-
-JDBC URL: jdbc:h2:mem:rewardsdb
-
-Username: manoj
-
-Password: manoj
-
-------------------------------------------------------------------------
-
 # API Endpoint
 
 GET /api/rewards
-
-Example Request:
-
-http://localhost:8080/api/rewards?customerId=1&startDate=2025-01-01&endDate=2025-03-31
 
 ------------------------------------------------------------------------
 
 ## Query Parameters
 
-  Parameter    Type        Required   Format
-  ------------ ----------- ---------- ------------
-  customerId   Long        Yes        Numeric
-  startDate    LocalDate   Yes        yyyy-MM-dd
-  endDate      LocalDate   Yes        yyyy-MM-dd
+  Parameter    Type        Required   Description
+  ------------ ----------- ---------- ------------------
+  customerId   Long        Yes        Customer ID
+  months       Integer     No         Number of months
+  startDate    LocalDate   No         yyyy-MM-dd
+  endDate      LocalDate   No         yyyy-MM-dd
 
 ------------------------------------------------------------------------
 
-# SUCCESS RESPONSE
+# 1  Default (Last 3 Months)
+
+### Request
+
+GET /api/rewards?customerId=1
+
+### Response
 
 ``` json
 {
@@ -106,25 +86,25 @@ http://localhost:8080/api/rewards?customerId=1&startDate=2025-01-01&endDate=2025
       "totalAmount": 80.0
     },
     "MARCH": {
-      "totalPoints": 0,
-      "totalAmount": 40.0
+      "totalPoints": 150,
+      "totalAmount": 150.0
     }
   },
   "transactions": [
     {
       "id": 1,
       "amount": 120.0,
-      "date": "2025-01-15"
+      "date": "2026-01-15"
     },
     {
       "id": 2,
       "amount": 80.0,
-      "date": "2025-02-10"
+      "date": "2026-02-10"
     },
     {
       "id": 3,
-      "amount": 40.0,
-      "date": "2025-03-05"
+      "amount": 150.0,
+      "date": "2026-03-05"
     }
   ]
 }
@@ -132,30 +112,103 @@ http://localhost:8080/api/rewards?customerId=1&startDate=2025-01-01&endDate=2025
 
 ------------------------------------------------------------------------
 
-# VALIDATION & ERROR SCENARIOS
+# 2️  Custom Months
 
-## 1️⃣ Invalid Date
+### Request
 
-Request: GET
-/api/rewards?customerId=1&startDate=2025-03-01&endDate=2025-04-31
+GET /api/rewards?customerId=6&months=4
 
-Response:
+### Response
 
 ``` json
 {
-  "status": 400,
-  "message": "Invalid date. Please use yyyy-MM-dd and provide a valid calendar date."
+  "customerId": 6,
+  "customerName": "Charlie",
+  "monthlyRewards": {
+    "DECEMBER": {
+      "totalPoints": 350,
+      "totalAmount": 300.0
+    },
+    "FEBRUARY": {
+      "totalPoints": 70,
+      "totalAmount": 110.0
+    }
+  },
+  "transactions": [
+    {
+      "id": 12,
+      "amount": 300.0,
+      "date": "2025-12-20"
+    },
+    {
+      "id": 13,
+      "amount": 110.0,
+      "date": "2026-02-25"
+    }
+  ]
 }
 ```
 
 ------------------------------------------------------------------------
 
-## 2️⃣ From Date Greater Than End Date
+# 3️  Custom Date Range
 
-Request: GET
-/api/rewards?customerId=1&startDate=2025-05-01&endDate=2025-03-01
+### Request
 
-Response:
+GET /api/rewards?customerId=2&startDate=2026-02-01&endDate=2026-03-31
+
+### Response
+
+``` json
+{
+  "customerId": 2,
+  "customerName": "Alice",
+  "monthlyRewards": {
+    "FEBRUARY": {
+      "totalPoints": 250,
+      "totalAmount": 200.0
+    },
+    "MARCH": {
+      "totalPoints": 10,
+      "totalAmount": 60.0
+    }
+  },
+  "transactions": [
+    {
+      "id": 4,
+      "amount": 200.0,
+      "date": "2026-02-18"
+    },
+    {
+      "id": 5,
+      "amount": 60.0,
+      "date": "2026-03-01"
+    }
+  ]
+}
+```
+
+------------------------------------------------------------------------
+
+# 4️  Validation Errors
+
+### months + date range together
+
+GET
+/api/rewards?customerId=1&months=3&startDate=2026-01-01&endDate=2026-03-31
+
+``` json
+{
+  "status": 400,
+  "message": "Provide either months or startDate & endDate, not both"
+}
+```
+
+------------------------------------------------------------------------
+
+### From date greater than End date
+
+GET /api/rewards?customerId=1&startDate=2026-03-01&endDate=2026-01-01
 
 ``` json
 {
@@ -166,12 +219,9 @@ Response:
 
 ------------------------------------------------------------------------
 
-## 3️⃣ No Transactions Found
+### No Transactions Found
 
-Request: GET
-/api/rewards?customerId=1&startDate=2026-01-01&endDate=2026-03-31
-
-Response:
+GET /api/rewards?customerId=4
 
 ``` json
 {
@@ -182,35 +232,15 @@ Response:
 
 ------------------------------------------------------------------------
 
-## 4️⃣ Invalid Customer ID
-
-Request: GET
-/api/rewards?customerId=999&startDate=2025-01-01&endDate=2025-03-31
-
-Response:
-
-``` json
-{
-  "status": 404,
-  "message": "Customer not found"
-}
-```
-
-------------------------------------------------------------------------
-
-# Logging
-
--   INFO → API start and completion
--   DEBUG → Transaction reward calculation
--   ERROR → Validation and exception scenarios
-
-------------------------------------------------------------------------
-
 # Testing
 
-Run: mvn test
+mvn test
 
-Uses: - @ExtendWith(MockitoExtension.class) - @Mock - @InjectMocks
+Uses:
+
+-   @ExtendWith(MockitoExtension.class)
+-   @Mock
+-   @InjectMocks
 
 ------------------------------------------------------------------------
 
